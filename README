@@ -1,0 +1,5 @@
+Simple MiniJava Compiler, to run you can use ant with the
+build.xml file, or just run MiniJava with the file name as arguments
+to compile to assembly (which is sent to console, so need to pipe it).
+
+Assembly visitor is at AST/Visitor/AssemblyVisitor.java 

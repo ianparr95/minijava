@@ -1,0 +1,287 @@
+/*
+ * CUP specification for the parser for a simple demo language.
+ * Change this into the parser for your implementation of MiniJava.
+ * CSE 401/P501 Au11.
+ */
+
+package Parser;
+
+import AST.*;
+import java.util.*;
+import java_cup.runtime.*;
+
+/* Code in the following section is included in the generated parser */
+
+parser code {:
+  /* Override default error message routine to handle line numbers correctly */
+  /* This routine is also called in the process of handling fatal errors. */
+
+  /** Report a non fatal error (or warning).  This method takes a message 
+   *  string and an additional object (to be used by specializations 
+   *  implemented in subclasses).  Prints the same simple error message
+   *  as the base class version, but correctly labels the line number.
+   *
+   * @param message an error message.
+   * @param info    an extra object reserved for use by specialized subclasses.
+   */
+  public void report_error(String message, Object info)
+    {
+      System.err.print(message);
+      System.err.flush();
+      if (info instanceof Symbol)
+	if (((Symbol)info).left != -1)
+	 System.err.println(" at line " + ((Symbol)info).left +
+			    " of input");
+	else System.err.println("");
+      else System.err.println("");
+    }
+:};  
+
+/* end of code included in generated parser
+
+
+/* Terminals (tokens returned by the scanner) */
+
+/* reserved words: */
+terminal WHILE, IF, ELSE, PRINTLN, TRUE, FALSE, THIS, NEW, BOOL, INT, DOUBLE;
+terminal PUBLIC, STATIC, VOID, STRING, MAIN, CLASS, EXTENDS, RETURN, LENGTH;
+/* operators: */
+terminal PLUS, BECOMES, NOT, MULT, LESS, MINUS, AND, DOT;
+
+/* delimiters: */
+terminal LPAREN, RPAREN, SEMICOLON, LBRACKET, RBRACKET, LCURLY, RCURLY, COMMA;
+
+/* tokens with values: */
+terminal String IDENTIFIER, INTEGER_LITERAL, DOUBLE_LITERAL;
+
+
+/* Nonterminals */
+
+nonterminal Program Program;
+nonterminal VarDecl VarDeclaration;
+nonterminal Type Type;
+nonterminal Statement Statement;
+nonterminal Assign AssignStatement;
+nonterminal ArrayAssign ArrayAssignStatement;
+nonterminal Exp Expression;
+nonterminal Identifier Identifier;
+nonterminal MainClass MainClass;
+nonterminal MethodDecl MethodDeclaration;
+nonterminal Formal Formal;
+nonterminal ClassDeclExtends ClassDeclarationExtends;
+nonterminal ClassDeclSimple ClassDeclarationSimple;
+
+/* Lists */
+nonterminal VarDeclList VarDeclarationList; 
+nonterminal StatementList StatementList;
+nonterminal ExpList ExpressionList;
+nonterminal FormalList FormalList;
+nonterminal MethodDeclList MethodDeclarationList;
+nonterminal ClassDeclList ClassDeclarationList;
+
+/* Precedence declarations */
+
+precedence left AND;
+precedence left LESS;
+precedence left PLUS, MINUS;
+precedence left MULT;
+precedence right NOT;
+precedence right NEW;
+precedence left DOT, LBRACKET, RBRACKET;
+
+/* Productions */
+
+/* called goal in the bnf */        	
+Program ::= MainClass:mc
+			{: RESULT = new Program(mc, new ClassDeclList(mcleft), mcleft); :}
+		|   MainClass:mc ClassDeclarationList:cdl
+		    {: RESULT = new Program(mc, cdl, mcleft); :};
+
+MainClass ::= CLASS Identifier:id LCURLY PUBLIC STATIC VOID MAIN LPAREN
+			  STRING LBRACKET RBRACKET Identifier:id2 RPAREN LCURLY
+			  Statement:s RCURLY RCURLY
+			{: RESULT = new MainClass(id, id2, s, idleft); :};
+
+/* Can match: no var decls, no method decls, or both (so 4 overall)  */
+ClassDeclarationSimple ::= CLASS Identifier:id LCURLY VarDeclarationList:vdl MethodDeclarationList:mdl RCURLY
+					    {: RESULT = new ClassDeclSimple(id, vdl, mdl, idleft); :}
+					   	|  CLASS Identifier:id LCURLY VarDeclarationList:vdl RCURLY
+					    {: RESULT = new ClassDeclSimple(id, vdl, new MethodDeclList(idleft), idleft); :}
+					   	|  CLASS Identifier:id LCURLY MethodDeclarationList:mdl RCURLY
+					    {: RESULT = new ClassDeclSimple(id, new VarDeclList(idleft), mdl, idleft); :}
+					    |  CLASS Identifier:id LCURLY RCURLY
+					    {: RESULT = new ClassDeclSimple(id, new VarDeclList(idleft), new MethodDeclList(idleft), idleft); :};
+/* Like ClassDeclarationSimple, can match 4 stuff overall */
+ClassDeclarationExtends ::= CLASS Identifier:id EXTENDS Identifier:id2 LCURLY VarDeclarationList:vdl MethodDeclarationList:mdl RCURLY
+					     {: RESULT = new ClassDeclExtends(id, id2, vdl, mdl, idleft); :}
+					   	 |  CLASS Identifier:id EXTENDS Identifier:id2 LCURLY VarDeclarationList:vdl RCURLY
+					     {: RESULT = new ClassDeclExtends(id, id2, vdl, new MethodDeclList(idleft), idleft); :}
+					   	 |  CLASS Identifier:id EXTENDS Identifier:id2 LCURLY MethodDeclarationList:mdl RCURLY
+					     {: RESULT = new ClassDeclExtends(id, id2, new VarDeclList(idleft), mdl, idleft); :}
+					     |  CLASS Identifier:id EXTENDS Identifier:id2 LCURLY RCURLY
+					     {: RESULT = new ClassDeclExtends(id, id2, new VarDeclList(idleft), new MethodDeclList(idleft), idleft); :};	
+/* Need to match with ClassDeclarationExtends and ClassDeclarationSimple */
+ClassDeclarationList ::= ClassDeclarationSimple:cds
+		    		  {: ClassDeclList cdl = new ClassDeclList(cdsleft);
+		    		  	 cdl.add(cds); RESULT = cdl; :}
+		    		  |  ClassDeclarationList:cdl ClassDeclarationSimple:cds
+		   			  {: cdl.add(cds); RESULT = cdl; :}
+		   			  |  ClassDeclarationExtends:cde
+		    		  {: ClassDeclList cdl = new ClassDeclList(cdeleft);
+		    		  	 cdl.add(cde); RESULT = cdl; :}
+		    		  |  ClassDeclarationList:cdl ClassDeclarationExtends:cde
+		   			  {: cdl.add(cde); RESULT = cdl; :};
+					  
+					  
+VarDeclaration ::= Type:t Identifier:id SEMICOLON
+			{: RESULT = new VarDecl(t, id, tleft); :};
+			
+VarDeclarationList ::= VarDeclaration:vd
+					{: VarDeclList vdl = new VarDeclList(vdleft);
+					   vdl.add(vd);
+					   RESULT = vdl; :}
+					|  VarDeclarationList:vdl VarDeclaration:vd
+					{: vdl.add(vd); RESULT = vdl; :};
+
+/* Used in argument list of method declarations, cause we have no semicolon at end (unlike var decl)*/				
+Formal ::= Type:t Identifier:id
+		   {: RESULT = new Formal(t, id, tleft); :};
+		   
+FormalList ::= Formal:f
+		      {: FormalList fl = new FormalList(fleft);
+		      	 fl.add(f); RESULT = fl; :}
+		      |  FormalList:fl COMMA Formal:f
+		      {: fl.add(f); RESULT = fl; :};		   
+
+StatementList ::= Statement:s
+			  {:  StatementList sl = new StatementList(sleft);
+			      sl.add(s); RESULT = sl; :}
+			  |	  StatementList:sl Statement:s
+			  {:  sl.add(s); RESULT = sl; :};
+			  
+ExpressionList ::= Expression:e
+			  {: ExpList el = new ExpList(eleft);
+			  	 el.add(e); RESULT = el; :}
+			  | ExpressionList:el COMMA Expression:e
+			  {: el.add(e); RESULT = el; :};
+
+/* Can go to mdeclaration with no arguments, or 1 argument + list. 
+also need check: can do vardecl, statements, or none or both, also with or without parameters
+So overall, a method declaration can match 8 statements */
+MethodDeclaration ::= PUBLIC Type:t Identifier:id LPAREN RPAREN /* first do: vdl, sl, no fl */
+				      LCURLY VarDeclarationList:vdl StatementList:sl RETURN
+				      Expression:e SEMICOLON RCURLY
+				      {: RESULT = new MethodDecl(t, id, new FormalList(tleft), vdl, sl, e, tleft); :}
+				  |   PUBLIC Type:t Identifier:id LPAREN FormalList:fl RPAREN /* vdl, sl, fl */
+				      LCURLY VarDeclarationList:vdl StatementList:sl RETURN
+				      Expression:e SEMICOLON RCURLY
+				      {: RESULT = new MethodDecl(t, id, fl, vdl, sl, e, tleft); :}
+				  |   PUBLIC Type:t Identifier:id LPAREN RPAREN /* vdl, no sl, no fl */
+				      LCURLY VarDeclarationList:vdl RETURN
+				      Expression:e SEMICOLON RCURLY
+				      {: RESULT = new MethodDecl(t, id, new FormalList(tleft), vdl, new StatementList(vdlleft), e, tleft); :}
+				  |   PUBLIC Type:t Identifier:id LPAREN FormalList:fl RPAREN /* vdl, no sl, fl */
+				      LCURLY VarDeclarationList:vdl RETURN
+				      Expression:e SEMICOLON RCURLY
+				      {: RESULT = new MethodDecl(t, id, fl, vdl, new StatementList(vdlleft), e, tleft); :}
+				  |   PUBLIC Type:t Identifier:id LPAREN RPAREN /* no vdl, sl, no fl*/
+				      LCURLY StatementList:sl RETURN
+				      Expression:e SEMICOLON RCURLY
+				      {: RESULT = new MethodDecl(t, id, new FormalList(tleft), new VarDeclList(tleft), sl, e, tleft); :}
+				  |   PUBLIC Type:t Identifier:id LPAREN FormalList:fl RPAREN /* no vdl, sl, fl */
+				      LCURLY StatementList:sl RETURN
+				      Expression:e SEMICOLON RCURLY
+				      {: RESULT = new MethodDecl(t, id, fl, new VarDeclList(tleft), sl, e, tleft); :}
+				  |   PUBLIC Type:t Identifier:id LPAREN RPAREN /* no vdl, no sl, no fl */
+				      LCURLY RETURN
+				      Expression:e SEMICOLON RCURLY
+				      {: RESULT = new MethodDecl(t, id, new FormalList(tleft), new VarDeclList(tleft), new StatementList(tleft), e, tleft); :}
+				  |   PUBLIC Type:t Identifier:id LPAREN FormalList:fl RPAREN /* no vdl, no sl, fl */
+				      LCURLY RETURN
+				      Expression:e SEMICOLON RCURLY
+				      {: RESULT = new MethodDecl(t, id, fl, new VarDeclList(tleft), new StatementList(tleft), e, tleft); :};
+				      
+MethodDeclarationList ::= MethodDeclaration:md
+					 {: MethodDeclList mdl = new MethodDeclList(mdleft);
+					    mdl.add(md); RESULT = mdl; :}
+					| MethodDeclarationList:mdl MethodDeclaration:md
+					 {: mdl.add(md); RESULT = mdl; :};
+
+Type ::= INT:i
+			{: RESULT = new IntegerType(ileft); :}
+	|	INT:i LBRACKET RBRACKET
+			{: RESULT = new IntArrayType(ileft); :}
+	|	BOOL:b
+			{: RESULT = new BooleanType(bleft); :}
+	|	DOUBLE:d
+			{: RESULT = new DoubleType(dleft); :}
+	|	Identifier:id /* use .s to extract string, from Identifier.java!!*/
+			{: RESULT = new IdentifierType(id.s, idleft); :};
+
+Statement ::= AssignStatement:s
+                {: RESULT = s; :}
+            | ArrayAssignStatement:s
+            	{: RESULT = s; :}
+            | IF LPAREN Expression:expr RPAREN Statement:s ELSE Statement:s2
+            	{: RESULT = new If(expr, s, s2, exprleft); :}
+            | WHILE LPAREN Expression:expr RPAREN Statement:s
+            	{: RESULT = new While(expr, s, exprleft); :}
+            | PRINTLN:pn LPAREN Expression:expr RPAREN SEMICOLON
+            	{: RESULT = new Print(expr, pnleft); :}
+            /* Statement list is a BLOCK */
+            | LCURLY StatementList:sl RCURLY 
+            	{: RESULT = new Block(sl, slleft); :}
+            /* Match empty statement list */
+            | LCURLY:l RCURLY
+            	{: RESULT = new Block(new StatementList(lleft), lleft); :};
+
+AssignStatement ::= Identifier:id BECOMES Expression:expr SEMICOLON
+                    {: RESULT = new Assign(id, expr, idleft); :};
+                    
+ArrayAssignStatement ::= Identifier:id LBRACKET Expression:expr RBRACKET BECOMES Expression:expr2 SEMICOLON
+                	{: RESULT = new ArrayAssign(id, expr, expr2, idleft); :};
+
+Identifier ::= IDENTIFIER:id
+                {: RESULT = new Identifier(id, idleft); :};
+                
+Expression ::= IDENTIFIER:name
+            {: RESULT = new IdentifierExp(name, nameleft); :}
+        | Expression:arg1 PLUS Expression:arg2
+            {: RESULT = new Plus(arg1, arg2, arg1left); :}
+        | Expression:arg1 AND Expression:arg2
+            {: RESULT = new And(arg1, arg2, arg1left); :}
+        | Expression:arg1 MINUS Expression:arg2
+            {: RESULT = new Minus(arg1, arg2, arg1left); :}
+        | Expression:arg1 MULT Expression:arg2
+            {: RESULT = new Times(arg1, arg2, arg1left); :}
+        | Expression:arg1 LESS Expression:arg2
+            {: RESULT = new LessThan(arg1, arg2, arg1left); :}
+        | LPAREN Expression:expr RPAREN
+            {: RESULT = expr; :}
+        | Expression:expr1 LBRACKET Expression:expr2 RBRACKET
+        	{: RESULT = new ArrayLookup(expr1, expr2, expr1left); :}
+       	| Expression:expr DOT LENGTH 
+       		{: RESULT = new ArrayLength(expr, exprleft); :}
+       	| TRUE:t
+       		{: RESULT = new True(tleft); :}
+       	| FALSE:f
+       		{: RESULT = new False(fleft); :}
+       	| THIS:t
+       		{: RESULT = new This(tleft); :}
+       	| NEW INT LBRACKET Expression:expr RBRACKET
+       		{: RESULT = new NewArray(expr, exprleft); :}
+       	| NEW Identifier:id LPAREN RPAREN
+       		{: RESULT = new NewObject(id, idleft); :}
+       	| NOT Expression:expr
+       		{: RESULT = new Not(expr, exprleft); :}
+        | INTEGER_LITERAL:int_lit
+        	{: RESULT = new IntegerLiteral(Integer.parseInt(int_lit), int_litleft); :}
+        | DOUBLE_LITERAL:double_lit
+        	{: RESULT = new DoubleLiteral(Double.parseDouble(double_lit), double_litleft); :}
+        | Expression:expr DOT Identifier:id LPAREN RPAREN
+        	{: RESULT = new Call(expr, id, new ExpList(exprleft), exprleft); :}
+        	/* function with one or more args */
+       	| Expression:expr DOT Identifier:id LPAREN ExpressionList:el RPAREN
+       		{: RESULT = new Call(expr, id, el, exprleft); :};
+        
+         

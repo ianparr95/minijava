@@ -1,0 +1,9 @@
+We believe our code-gen is working for this assignment. We didn't implement
+any extra features. Completing this assignment required us to go and fix a
+few precedence bugs with the parser phase of the project, but nothign major.
+One thing we found especially difficult was implementing lessthan. We had a
+few bugs related to it, where a sample program would run and give us NEARLY
+correct data but with a few differences. We found that the bug was coming 
+from the lessthan operation, where we were forgetting to push the first
+argument onto the stack before evaluating the second. The other operations
+already did that, but we had just forgotten to implement it on lessthan. 

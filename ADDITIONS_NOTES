@@ -1,0 +1,11 @@
+One thing we found particularly difficut to deal with in this problem was how to call
+a C function with doubles. We made a C funtion to help us implement "<", which took in
+two doubles as parameters. Our less than wasn't working properly, so to test it, we 
+tried printing out the two doubles in the C funtion. This resulted in a seg fault, which
+we couldn't figure out for the longest time. It turns out that in our code, we pushed
+the parameters into %rdi and %rsi, but doubles should be passed in %xmm0 and %xmm1 instead. 
+
+Another difficult problem we had in this assignment was knowing when we were dealing
+with doubles vs ints, for example in printing out numbers. It took a bit of time to
+find out where we needed to set the type of variable currently being processed, and we
+had many unexpected errors until that was completed. 
